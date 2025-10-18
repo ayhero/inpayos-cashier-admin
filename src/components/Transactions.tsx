@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Search, Filter, Download } from 'lucide-react';
+import { getStatusDisplayName, getStatusColor } from '../constants/status';
 
 const transactions = [
   {
@@ -89,16 +90,28 @@ export function Transactions() {
   });
 
   const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'success':
-        return <Badge variant="default">成功</Badge>;
-      case 'pending':
-        return <Badge variant="secondary">处理中</Badge>;
-      case 'failed':
-        return <Badge variant="destructive">失败</Badge>;
-      default:
-        return <Badge variant="outline">未知</Badge>;
-    }
+    const displayName = getStatusDisplayName(status);
+    const color = getStatusColor(status);
+    
+    const getVariantAndClass = (color: string) => {
+      switch (color) {
+        case 'success':
+          return { variant: 'default' as const, className: 'bg-green-500' };
+        case 'error':
+          return { variant: 'destructive' as const, className: '' };
+        case 'warning':
+          return { variant: 'secondary' as const, className: 'bg-yellow-500' };
+        case 'processing':
+          return { variant: 'secondary' as const, className: 'bg-blue-500' };
+        case 'info':
+          return { variant: 'outline' as const, className: '' };
+        default:
+          return { variant: 'outline' as const, className: '' };
+      }
+    };
+    
+    const { variant, className } = getVariantAndClass(color);
+    return <Badge variant={variant} className={className}>{displayName}</Badge>;
   };
 
   return (

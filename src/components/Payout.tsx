@@ -15,6 +15,7 @@ import {
   TransactionQueryParams,
   TodayStats 
 } from '../services/transactionService';
+import { getStatusDisplayName, getStatusColor } from '../constants/status';
 
 export function PayoutRecords() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -128,18 +129,28 @@ export function PayoutRecords() {
   };
 
   const getStatusBadge = (status: TransactionStatus) => {
-    switch (status) {
-      case TransactionStatus.SUCCESS:
-        return <Badge variant="default" className="bg-green-500">成功</Badge>;
-      case TransactionStatus.PENDING:
-        return <Badge variant="secondary" className="bg-yellow-500">处理中</Badge>;
-      case TransactionStatus.FAILED:
-        return <Badge variant="destructive">失败</Badge>;
-      case TransactionStatus.CANCELLED:
-        return <Badge variant="outline">已取消</Badge>;
-      default:
-        return <Badge variant="outline">未知</Badge>;
-    }
+    const displayName = getStatusDisplayName(status);
+    const color = getStatusColor(status);
+    
+    const getVariantAndClass = (color: string) => {
+      switch (color) {
+        case 'success':
+          return { variant: 'default' as const, className: 'bg-green-500' };
+        case 'error':
+          return { variant: 'destructive' as const, className: '' };
+        case 'warning':
+          return { variant: 'secondary' as const, className: 'bg-yellow-500' };
+        case 'processing':
+          return { variant: 'secondary' as const, className: 'bg-blue-500' };
+        case 'info':
+          return { variant: 'outline' as const, className: '' };
+        default:
+          return { variant: 'outline' as const, className: '' };
+      }
+    };
+    
+    const { variant, className } = getVariantAndClass(color);
+    return <Badge variant={variant} className={className}>{displayName}</Badge>;
   };
 
   const formatCurrency = (amount: string, currency: string) => {

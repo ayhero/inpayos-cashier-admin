@@ -9,10 +9,31 @@ export enum TransactionType {
 
 // 交易状态枚举 - 与后端 const.go 保持一致
 export enum TransactionStatus {
+  // 基础状态
+  CREATED = 'created',
+  ACTIVE = 'active',
+  INACTIVE = 'inactive',
   PENDING = 'pending',
-  SUCCESS = 'success', 
+  PROCESSING = 'processing',
+  SUBMITTED = 'submitted',
+  CONFIRMING = 'confirming',
+  SUCCESS = 'success',
   FAILED = 'failed',
-  CANCELLED = 'cancelled'
+  CANCELLED = 'cancelled',
+  EXPIRED = 'expired',
+  COMPLETED = 'completed',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  SUSPENDED = 'suspended',
+  DELETED = 'deleted',
+  ENABLED = 'enabled',
+  DISABLED = 'disabled',
+  ONLINE = 'online',
+  OFFLINE = 'offline',
+  BUSY = 'busy',
+  LOCKED = 'locked',
+  ON = 'on',
+  OFF = 'off'
 }
 
 // 渠道状态枚举
