@@ -93,7 +93,7 @@ jobs:
           docker run -d \
             --name inpayos-cashier-admin \
             --restart unless-stopped \
-            -p 8081:80 \
+            -p 3201:80 \
             -v /root/inpayos-cashier-admin/logs:/var/log/nginx \
             ghcr.io/ayhero/inpayos-cashier-admin:latest
           
@@ -110,11 +110,11 @@ jobs:
             
             # 检查端口监听
             echo "🔍 Checking port status:"
-            netstat -tlnp | grep ":8081" || echo "Port 8081 may still be binding..."
+            netstat -tlnp | grep ":3201" || echo "Port 3201 may still be binding..."
             
             # 尝试健康检查
             echo "🏥 Health check:"
-            if curl -f http://localhost:8081 2>/dev/null; then
+            if curl -f http://localhost:3201 2>/dev/null; then
               echo "✅ Cashier Admin frontend health check passed"
             else
               echo "⚠️ Cashier Admin frontend health check failed (may still be starting)"
