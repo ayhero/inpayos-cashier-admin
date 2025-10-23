@@ -92,16 +92,12 @@ jobs:
           # 拉取最新镜像
           docker pull ghcr.io/ayhero/inpayos-cashier-admin:latest
           
-          # 创建环境配置文件
-          echo '${{ secrets.ENV }}' > .env.production
-          
-          # 启动应用容器（nginx + 前端静态文件）
+          # 启动应用容器（nginx + Node.js 代理服务器）
           docker run -d \
             --name inpayos-cashier-admin \
             --restart unless-stopped \
             -p 3201:80 \
-            -v /root/inpayos-cashier-admin/logs:/var/log/nginx \
-            -v /root/inpayos-cashier-admin/.env.production:/app/.env.production \
+            -v /root/inpayos-cashier-admin/logs:/var/log/supervisor \
             ghcr.io/ayhero/inpayos-cashier-admin:latest
           
           # 等待服务启动
