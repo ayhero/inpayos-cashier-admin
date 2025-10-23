@@ -1,19 +1,20 @@
-name: AWS Dev Deployment
+name: AWS Prod Deployment
 
 on:
-  push:
-    branches: [ main ]
   workflow_dispatch:
+  release:
+    types: [published]
 
 env:
   REGISTRY: ghcr.io
   IMAGE_NAME: ${{ github.repository }}
-  AWS_HOST: 43.204.234.146
+  AWS_HOST: 43.204.234.146  # 替换为生产环境IP
+  API_HOST: 43.204.234.146  # 替换为生产环境IP
 
 jobs:
   build-and-deploy:
     runs-on: ubuntu-latest
-    environment: DEV
+    environment: PROD
     permissions:
       contents: read
       packages: write
@@ -58,7 +59,7 @@ jobs:
           type=ref,event=branch
           type=ref,event=pr
           type=sha,prefix={{branch}}-
-          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,value=prod-latest,enable={{is_default_branch}}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
@@ -79,41 +80,41 @@ jobs:
         command_timeout: 10m
         script: |
           # 创建应用目录
-          mkdir -p /root/inpayos-cashier-admin/logs
-          cd /root/inpayos-cashier-admin
+          mkdir -p /root/inpayos-cashier-admin-prod/logs
+          cd /root/inpayos-cashier-admin-prod
           
           # 登录到 GitHub Container Registry
           echo '${{ secrets.GITHUB_TOKEN }}' | docker login ghcr.io -u ${{ github.actor }} --password-stdin
           
           # 停止并删除现有容器
-          docker stop inpayos-cashier-admin || true
-          docker rm inpayos-cashier-admin || true
+          docker stop inpayos-cashier-admin-prod || true
+          docker rm inpayos-cashier-admin-prod || true
           
           # 拉取最新镜像
-          docker pull ghcr.io/ayhero/inpayos-cashier-admin:latest
+          docker pull ghcr.io/ayhero/inpayos-cashier-admin:prod-latest
           
           # 创建环境配置文件
           echo '${{ secrets.ENV }}' > .env.production
           
           # 启动应用容器（nginx + 前端静态文件）
           docker run -d \
-            --name inpayos-cashier-admin \
+            --name inpayos-cashier-admin-prod \
             --restart unless-stopped \
             -p 3201:80 \
-            -v /root/inpayos-cashier-admin/logs:/var/log/nginx \
-            -v /root/inpayos-cashier-admin/.env.production:/app/.env.production \
-            ghcr.io/ayhero/inpayos-cashier-admin:latest
+            -v /root/inpayos-cashier-admin-prod/logs:/var/log/nginx \
+            -v /root/inpayos-cashier-admin-prod/.env.production:/app/.env.production \
+            ghcr.io/ayhero/inpayos-cashier-admin:prod-latest
           
           # 等待服务启动
           sleep 15
           
           # 检查容器状态
           echo "🔍 Checking container status:"
-          docker ps -a | grep inpayos-cashier-admin
+          docker ps -a | grep inpayos-cashier-admin-prod
           
           # 检查应用是否启动成功
-          if docker ps | grep inpayos-cashier-admin | grep -q "Up"; then
-            echo "✅ InPayOS Cashier Admin frontend is running"
+          if docker ps | grep inpayos-cashier-admin-prod | grep -q "Up"; then
+            echo "✅ InPayOS Cashier Admin frontend (PROD) is running"
             
             # 检查端口监听
             echo "🔍 Checking port status:"
@@ -129,9 +130,9 @@ jobs:
             
             # 显示最近日志
             echo "📝 Recent logs:"
-            docker logs --tail=20 inpayos-cashier-admin
+            docker logs --tail=20 inpayos-cashier-admin-prod
           else
             echo "❌ InPayOS Cashier Admin container failed to start"
-            docker logs inpayos-cashier-admin
+            docker logs inpayos-cashier-admin-prod
             exit 1
           fi
