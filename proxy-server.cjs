@@ -44,7 +44,7 @@ router.all('/api/(.*)', async (ctx) => {
     
     // /api/auth -> /auth -> http://host.docker.internal:6084/auth
     const targetPath = '/' + ctx.params[0];
-    const targetUrl = `http://localhost:6084${targetPath}`;
+    const targetUrl = `http://host.docker.internal:6084${targetPath}`;
     
     console.log(`[PROXY] ${method} ${ctx.url} -> ${targetUrl}`);
     
@@ -83,7 +83,7 @@ app.use(router.allowedMethods());
 // 启动服务器
 app.listen(3202, () => {
   console.log(`🚀 API Proxy Server running on http://localhost:3202`);
-  console.log(`🎯 Forwarding /api/* to http://localhost:6084/*`);
+  console.log(`🎯 Forwarding /api/* to http://host.docker.internal:6084/*`);
 });
 
 process.on('SIGTERM', () => process.exit(0));
