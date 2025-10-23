@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Search, Filter, Download, RefreshCw } from 'lucide-react';
+import { Search, Filter, Download } from 'lucide-react';
 import { 
   transactionService, 
   TransactionInfo, 
@@ -16,6 +16,7 @@ import {
   TodayStats 
 } from '../services/transactionService';
 import { getStatusDisplayName, getStatusColor } from '../constants/status';
+import { toast } from '../utils/toast';
 
 export function PayoutRecords() {
   const [searchTerm, setSearchTerm] = useState('');
@@ -30,6 +31,14 @@ export function PayoutRecords() {
     total: 0,
     totalPages: 0
   });
+
+  // 确认交易相关状态
+  const [confirmDialogOpen, setConfirmDialogOpen] = useState(false);
+  const [confirmingRecord, setConfirmingRecord] = useState<TransactionInfo | null>(null);
+  const [referenceId, setReferenceId] = useState('');
+  const [secondConfirmOpen, setSecondConfirmOpen] = useState(false);
+  const [confirming, setConfirming] = useState(false);
+  const [confirmError, setConfirmError] = useState<string>('');
 
   // 获取今日统计
   const fetchTodayStats = async () => {
@@ -169,14 +178,68 @@ export function PayoutRecords() {
     return new Date(dateString).toLocaleString('zh-CN');
   };
 
-  const handleRetryNotification = async (trxID: string) => {
+  // 打开确认交易对话框
+  const handleConfirmTransaction = (record: TransactionInfo) => {
+    setConfirmingRecord(record);
+    setReferenceId('');
+    setConfirmDialogOpen(true);
+  };
+
+  // 第一步确认：输入reference_id
+  const handleFirstConfirm = () => {
+    if (!referenceId.trim()) {
+      toast.warning('请输入流水号', '流水号不能为空');
+      return;
+    }
+    setConfirmDialogOpen(false);
+    setSecondConfirmOpen(true);
+  };
+
+  // 最终确认并提交
+  const handleFinalConfirm = async () => {
+    if (!confirmingRecord || !referenceId.trim()) {
+      return;
+    }
+
+    setConfirming(true);
+    setConfirmError('');
     try {
-      await transactionService.retryNotification(trxID);
-      fetchRecords(); // 刷新列表
-    } catch (error) {
-      console.error('重试通知失败:', error);
+      const response = await transactionService.confirmTransaction({
+        trxID: confirmingRecord.trxID,
+        referenceID: referenceId.trim(),
+        trxType: TransactionType.PAYOUT
+      });
+
+      if (response.success) {
+        toast.success('交易确认成功', `交易 ${confirmingRecord.trxID} 已成功确认`);
+        fetchRecords(); // 刷新列表
+        // 成功后关闭弹窗
+        setSecondConfirmOpen(false);
+        setConfirmingRecord(null);
+        setReferenceId('');
+        setConfirmError('');
+      } else {
+        // 失败时显示错误信息，但不关闭弹窗
+        setConfirmError(response.msg || '确认失败');
+      }
+    } catch (error: any) {
+      console.error('确认交易失败:', error);
+      setConfirmError('确认失败，请稍后重试');
+    } finally {
+      setConfirming(false);
     }
   };
+
+  // 取消确认
+  const handleCancelConfirm = () => {
+    setConfirmDialogOpen(false);
+    setSecondConfirmOpen(false);
+    setConfirmingRecord(null);
+    setReferenceId('');
+    setConfirmError('');
+  };
+
+
 
   return (
     <div className="p-6 space-y-6">
@@ -281,7 +344,6 @@ export function PayoutRecords() {
             <TableHeader>
               <TableRow>
                 <TableHead>交易ID</TableHead>
-                <TableHead>请求ID</TableHead>
                 <TableHead>金额</TableHead>
                 <TableHead>支付方式</TableHead>
                 <TableHead>状态</TableHead>
@@ -294,7 +356,6 @@ export function PayoutRecords() {
               {records.map((record) => (
                 <TableRow key={record.trxID}>
                   <TableCell className="font-mono text-sm">{record.trxID}</TableCell>
-                  <TableCell className="font-mono text-sm">{record.reqID}</TableCell>
                   <TableCell>
                     {formatCurrencyForModal(record.amount, record.ccy)}
                   </TableCell>
@@ -326,10 +387,6 @@ export function PayoutRecords() {
                               <div>
                                 <label className="font-medium">交易ID</label>
                                 <p className="text-sm text-muted-foreground font-mono">{selectedRecord.trxID}</p>
-                              </div>
-                              <div>
-                                <label className="font-medium">请求ID</label>
-                                <p className="text-sm text-muted-foreground font-mono">{selectedRecord.reqID}</p>
                               </div>
                               <div>
                                 <label className="font-medium">交易金额</label>
@@ -409,14 +466,14 @@ export function PayoutRecords() {
                           )}
                         </DialogContent>
                       </Dialog>
-                      {record.status === TransactionStatus.FAILED && (
+                      {record.status === TransactionStatus.PENDING && (
                         <Button 
-                          variant="outline" 
+                          variant="default" 
                           size="sm"
-                          onClick={() => handleRetryNotification(record.trxID)}
+                          onClick={() => handleConfirmTransaction(record)}
                           className="gap-1"
                         >
-                          <RefreshCw className="h-4 w-4" />
+                          确认
                         </Button>
                       )}
                     </div>
@@ -452,6 +509,90 @@ export function PayoutRecords() {
           </div>
         </CardContent>
       </Card>
+
+      {/* 确认交易对话框 - 第一步：输入参考ID */}
+      <Dialog open={confirmDialogOpen} onOpenChange={setConfirmDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认交易</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span className="font-medium">交易ID:</span>
+                <span className="font-mono">{confirmingRecord?.trxID}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">交易金额:</span>
+                <span>{confirmingRecord && formatCurrencyForModal(confirmingRecord.amount, confirmingRecord.ccy)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">支付方式:</span>
+                <span>{confirmingRecord?.trxMethod || '-'}</span>
+              </div>
+            </div>
+            <Input
+              placeholder="请输入流水号"
+              value={referenceId}
+              onChange={(e) => setReferenceId(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleFirstConfirm()}
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={handleCancelConfirm}>
+              取消
+            </Button>
+            <Button onClick={handleFirstConfirm}>
+              下一步
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 确认交易对话框 - 第二步：最终确认 */}
+      <Dialog open={secondConfirmOpen} onOpenChange={setSecondConfirmOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>确认提交</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {confirmError && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded">
+                {confirmError}
+              </div>
+            )}
+            <div className="bg-muted p-4 rounded-lg space-y-2">
+              <div className="flex justify-between">
+                <span className="font-medium">交易ID:</span>
+                <span className="font-mono">{confirmingRecord?.trxID}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">交易金额:</span>
+                <span>{confirmingRecord && formatCurrencyForModal(confirmingRecord.amount, confirmingRecord.ccy)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">支付方式:</span>
+                <span>{confirmingRecord?.trxMethod || '-'}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="font-medium">流水号:</span>
+                <span className="font-mono">{referenceId}</span>
+              </div>
+            </div>
+            <div className="text-sm text-yellow-600 bg-yellow-50 p-3 rounded">
+              ⚠️ 确认后交易状态将会更新，此操作不可撤销！
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={handleCancelConfirm} disabled={confirming}>
+              取消
+            </Button>
+            <Button onClick={handleFinalConfirm} disabled={confirming}>
+              {confirming ? '确认中...' : '确认提交'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -486,5 +486,44 @@ export const transactionService = {
         data: {} as TransactionInfo,
       };
     }
-  }
+  },
+
+  // 确认交易
+  confirmTransaction: async (params: {
+    trxID: string;
+    referenceID: string;
+    trxType: TransactionType;
+  }): Promise<ApiResponse<TransactionInfo>> => {
+    try {
+      const response = await api.post<BackendTransactionInfo>('/transactions/confirm', {
+        trx_id: params.trxID,
+        reference_id: params.referenceID,
+        trx_type: params.trxType,
+      });
+
+      if (response.code === '0000') {
+        return {
+          code: '200',
+          msg: response.msg || '确认成功',
+          success: true,
+          data: convertBackendToFrontend(response.data),
+        };
+      } else {
+        return {
+          code: response.code,
+          msg: response.msg || '确认失败',
+          success: false,
+          data: {} as TransactionInfo,
+        };
+      }
+    } catch (error: any) {
+      console.error('确认交易失败:', error);
+      return {
+        code: '500',
+        msg: error.message || '网络错误',
+        success: false,
+        data: {} as TransactionInfo,
+      };
+    }
+  },
 };

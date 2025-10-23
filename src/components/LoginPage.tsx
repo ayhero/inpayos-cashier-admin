@@ -92,7 +92,7 @@ export function LoginPage({ onLogin, onSwitchToRegister, onSwitchToResetPassword
       <div className="w-full max-w-md">
         <Card>
           <CardHeader className="text-center">
-            <CardTitle className="text-2xl">商户登录</CardTitle>
+            <CardTitle className="text-2xl">车队登录</CardTitle>
           </CardHeader>
           <CardContent>
             <Tabs value={activeTab} onValueChange={(value) => {

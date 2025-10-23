@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+// import { useEffect } from 'react';
 import { X, CheckCircle, AlertCircle, AlertTriangle, Info } from 'lucide-react';
 import { useToastStore, Toast as ToastType } from '@/utils/toast';
 import { cn } from './utils';
@@ -63,7 +63,7 @@ function ToastItem({ toast }: { toast: ToastType }) {
 }
 
 export function ToastContainer() {
-  const { toasts, removeToast } = useToastStore();
+  const { toasts } = useToastStore();
 
   return (
     <div className="fixed top-4 right-4 z-50 flex flex-col gap-2 w-96">

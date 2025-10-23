@@ -59,7 +59,7 @@ export function RechargeRecords() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [methodFilter, setMethodFilter] = useState('all');
   const [currencyFilter, setCurrencyFilter] = useState('all');
-  const [selectedRecord, setSelectedRecord] = useState<any>(null);
+  const [, setSelectedRecord] = useState<any>(null);
   const [showManualRecharge, setShowManualRecharge] = useState(false);
 
   const filteredRecords = rechargeRecords.filter(record => {

@@ -22,10 +22,10 @@ import { AuthContainer } from './components/AuthContainer';
 import { Dashboard } from './components/Dashboard';
 import { PayinRecords } from './components/Payin';
 import { PayoutRecords } from './components/Payout';
+import { Config } from './components/Config';
 // import { RefundRecords } from './components/RefundRecords';
 // import { RechargeRecords } from './components/RechargeRecords';
 import { SettlementRecords } from './components/SettlementRecords';
-import { MerchantConfig } from './components/MerchantConfig';
 import { AccountBalance } from './components/AccountBalance';
 import { ChangePasswordPage } from './components/ChangePasswordPage';
 import { ToastContainer } from './components/Toast';
@@ -89,6 +89,7 @@ export default function App() {
       icon: ArrowUpRight,
       component: PayoutRecords
     },
+
     // {
     //   id: 'refund',
     //   label: '退款',
@@ -115,10 +116,11 @@ export default function App() {
     },
     {
       id: 'config',
-      label: '设置',
+      label: '配置',
       icon: Settings,
-      component: MerchantConfig
-    }
+      component: Config
+    },
+
   ];
 
   const ActiveComponent = menuItems.find(item => item.id === activeMenu)?.component || Dashboard;
