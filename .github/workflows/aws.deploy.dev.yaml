@@ -98,6 +98,7 @@ jobs:
             --restart unless-stopped \
             -p 3201:80 \
             -v /root/inpayos-cashier-admin/logs:/var/log/supervisor \
+            --add-host host.docker.internal:host-gateway \
             ghcr.io/ayhero/inpayos-cashier-admin:latest
           
           # 等待服务启动

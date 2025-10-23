@@ -42,9 +42,9 @@ router.all('/api/(.*)', async (ctx) => {
     const { method, header, query } = ctx.request;
     const body = ctx.request.body;
     
-    // /api/auth -> /auth -> http://localhost:6084/auth
+    // /api/auth -> /auth -> http://host.docker.internal:6084/auth
     const targetPath = '/' + ctx.params[0];
-    const targetUrl = `http://localhost:6084${targetPath}`;
+    const targetUrl = `http://host.docker.internal:6084${targetPath}`;
     
     console.log(`[PROXY] ${method} ${ctx.url} -> ${targetUrl}`);
     
