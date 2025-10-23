@@ -1,6 +1,6 @@
 # InPayOS Cashier Admin Frontend Makefile
 
-.PHONY: help install dev build preview clean lint format sync-config-dev sync-config-prod check-github-auth
+.PHONY: help install dev build preview clean lint format sync-config-dev sync-config-prod check-github-auth switch-github-auth
 
 # 默认目标
 help: ## 显示帮助信息
@@ -85,5 +85,19 @@ check-github-auth: ## 检查GitHub CLI认证状态
 	@if GH_TOKEN="" gh auth status 2>/dev/null | grep -A1 "ayhero" | grep -q "Active account: true"; then \
 		echo "✅ 当前正在使用ayhero账户，可以同步配置"; \
 	else \
-		echo "⚠️  当前未使用ayhero账户，请运行: GH_TOKEN=\"\" gh auth switch --hostname github.com --user ayhero"; \
+		echo "⚠️  当前未使用ayhero账户，请运行: make switch-github-auth"; \
 	fi
+
+switch-github-auth: ## 切换到ayhero GitHub账号
+	@echo "🔄 切换GitHub CLI账号到ayhero..."
+	@if GH_TOKEN="" gh auth status 2>/dev/null | grep -A1 "ayhero" | grep -q "Active account: true"; then \
+		echo "✅ 当前已经是ayhero账户，无需切换"; \
+	else \
+		echo "⚡ 清除GH_TOKEN环境变量并切换账号..."; \
+		GH_TOKEN="" gh auth switch --hostname github.com --user ayhero && \
+		echo "✅ 成功切换到ayhero账户" || \
+		(echo "❌ 切换失败，请检查GitHub CLI配置或手动运行: gh auth login" && exit 1); \
+	fi
+	@echo ""
+	@echo "📊 当前认证状态:"
+	@GH_TOKEN="" gh auth status
