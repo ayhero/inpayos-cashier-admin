@@ -2,7 +2,7 @@ import axios, { AxiosInstance, AxiosRequestConfig, AxiosResponse } from 'axios';
 import { useAuthStore } from '@/store/authStore';
 
 // API配置
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3202';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:3201';
 const REQUEST_TIMEOUT = 10000;
 
 // 创建axios实例
