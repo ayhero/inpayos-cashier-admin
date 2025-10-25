@@ -8,7 +8,7 @@
     "build": "tsc && vite build",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "preview": "vite preview",
-    "proxy": "node proxy-server.cjs"
+    "proxy": "TARGET_HOST=localhost node proxy-server.cjs"
   },
   "dependencies": {
     "@koa/cors": "^5.0.0",

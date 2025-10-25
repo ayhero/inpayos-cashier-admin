@@ -76,9 +76,10 @@ interface BackendTransactionInfo {
   actual_amount?: string;
   usd_amount?: string;
   link?: string;
-  created_at: number; // 毫秒时间戳
+  createdAt: number; // 毫秒时间戳
   updated_at: number; // 毫秒时间戳
   completed_at?: number; // 毫秒时间戳
+  confirmed_at?: number; // 毫秒时间戳
   expired_at?: number; // 毫秒时间戳
   trx_type: string;
   trx_method?: string;
@@ -127,6 +128,7 @@ export interface TransactionInfo {
   createdAt: string;
   updatedAt: string;
   completedAt?: string;
+  confirmedAt?: string;
   expiredAt?: string;
   trxType: TransactionType;
   trxMethod?: string;
@@ -212,6 +214,7 @@ const convertBackendToFrontend = (backend: BackendTransactionInfo): TransactionI
     createdAt: timestampToISOString(backend.created_at) || '',
     updatedAt: timestampToISOString(backend.updated_at) || '',
     completedAt: timestampToISOString(backend.completed_at),
+    confirmedAt: timestampToISOString(backend.confirmed_at),
     expiredAt: timestampToISOString(backend.expired_at),
     trxType: backend.trx_type as TransactionType,
     trxMethod: backend.trx_method,

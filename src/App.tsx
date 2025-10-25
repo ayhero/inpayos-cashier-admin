@@ -15,7 +15,8 @@ import {
   LogOut,
   Building2,
   Menu,
-  KeyRound
+  KeyRound,
+  Users
 } from 'lucide-react';
 
 import { AuthContainer } from './components/AuthContainer';
@@ -29,10 +30,11 @@ import { SettlementRecords } from './components/SettlementRecords';
 import { AccountBalance } from './components/AccountBalance';
 import { ChangePasswordPage } from './components/ChangePasswordPage';
 import { ToastContainer } from './components/Toast';
+import { CashierManagement } from './components/CashierManagement';
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [merchantInfo, setMerchantInfo] = useState<UserInfo | null>(null);
   const { isLoggedIn, currentUser, login, logout } = useAuthStore();
@@ -88,6 +90,12 @@ export default function App() {
       label: '代付',
       icon: ArrowUpRight,
       component: PayoutRecords
+    },
+    {
+      id: 'cashier',
+      label: 'Cashier',
+      icon: Users,
+      component: CashierManagement
     },
 
     // {
@@ -169,7 +177,7 @@ export default function App() {
                 </h4>
               )}
               <div className="space-y-1">
-                {menuItems.slice(1, 3).map((item) => (
+                {menuItems.slice(1, 4).map((item) => (
                   <div
                     key={item.id}
                     className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${
@@ -194,7 +202,7 @@ export default function App() {
                 </h4>
               )}
               <div className="space-y-1">
-                {menuItems.slice(4, 6).map((item) => (
+                {menuItems.slice(5, 7).map((item) => (
                   <div
                     key={item.id}
                     className={`flex items-center gap-3 px-3 py-2 rounded-md cursor-pointer transition-colors ${

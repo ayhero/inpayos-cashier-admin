@@ -7,6 +7,9 @@ const axios = require('axios');
 const app = new Koa();
 const router = new Router();
 
+// 从环境变量获取目标主机，默认使用 host.docker.internal
+const TARGET_HOST = process.env.TARGET_HOST || 'host.docker.internal';
+
 // 中间件
 app.use(cors({
   origin: '*',
@@ -42,9 +45,9 @@ router.all('/api/(.*)', async (ctx) => {
     const { method, header, query } = ctx.request;
     const body = ctx.request.body;
     
-    // /api/auth -> /auth -> http://host.docker.internal:6084/auth
+    // /api/auth -> /auth -> http://TARGET_HOST:6084/auth
     const targetPath = '/' + ctx.params[0];
-    const targetUrl = `http://host.docker.internal:6084${targetPath}`;
+    const targetUrl = `http://${TARGET_HOST}:6084${targetPath}`;
     
     console.log(`[PROXY] ${method} ${ctx.url} -> ${targetUrl}`);
     
@@ -83,7 +86,7 @@ app.use(router.allowedMethods());
 // 启动服务器
 app.listen(3202, () => {
   console.log(`🚀 API Proxy Server running on http://localhost:3202`);
-  console.log(`🎯 Forwarding /api/* to http://host.docker.internal:6084/*`);
+  console.log(`🎯 Forwarding /api/* to http://${TARGET_HOST}:6084/*`);
 });
 
 process.on('SIGTERM', () => process.exit(0));
