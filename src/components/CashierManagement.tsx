@@ -6,8 +6,9 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Search, Filter, Download, RefreshCw, User } from 'lucide-react';
-import { cashierService, Cashier, CashierListParams, CashierStats } from '../services/cashierService';
+import { Label } from './ui/label';
+import { Search, Filter, Download, RefreshCw, User, Plus, Edit } from 'lucide-react';
+import { cashierService, Cashier, CashierListParams, CashierStats, CreateCashierParams, UpdateCashierParams } from '../services/cashierService';
 import { toast } from '../utils/toast';
 
 export function CashierManagement() {
@@ -15,8 +16,6 @@ export function CashierManagement() {
   
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [regionFilter, setRegionFilter] = useState<string>('all');
-  const [typeFilter, setTypeFilter] = useState<string>('all');
   const [selectedCashier, setSelectedCashier] = useState<Cashier | null>(null);
   const [cashiers, setCashiers] = useState<Cashier[]>([]);
   const [stats, setStats] = useState<CashierStats>({
@@ -33,6 +32,27 @@ export function CashierManagement() {
     total: 0,
     totalPages: 0
   });
+
+  // 新增/编辑对话框状态
+  const [showCreateDialog, setShowCreateDialog] = useState(false);
+  const [showEditDialog, setShowEditDialog] = useState(false);
+  const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
+  const [formData, setFormData] = useState<CreateCashierParams>({
+    type: 'private',
+    bank_code: '',
+    bank_name: '',
+    card_number: '',
+    holder_name: '',
+    holder_phone: '',
+    holder_email: '',
+    country: 'IN',
+    country_code: '+91',
+    province: '',
+    city: '',
+    ccy: 'INR',
+    remark: ''
+  });
+  const [submitting, setSubmitting] = useState(false);
 
   // 获取出纳员统计
   const fetchStats = useCallback(async () => {
@@ -58,13 +78,7 @@ export function CashierManagement() {
 
       // 添加筛选条件
       if (statusFilter !== 'all') {
-        params.status = statusFilter;
-      }
-      if (regionFilter !== 'all') {
-        params.region = regionFilter;
-      }
-      if (typeFilter !== 'all') {
-        params.type = typeFilter;
+        params.online_status = statusFilter;
       }
       if (searchTerm) {
         // 支持按持卡人姓名、邮箱、电话、卡号搜索
@@ -108,12 +122,13 @@ export function CashierManagement() {
     } finally {
       setLoading(false);
     }
-  }, [pagination.page, statusFilter, regionFilter, typeFilter, searchTerm]);
+  }, [pagination.page, statusFilter, searchTerm]);
 
   useEffect(() => {
     fetchCashiers();
     fetchStats();
-  }, [fetchCashiers, fetchStats]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pagination.page, statusFilter, searchTerm]);
 
   const handleSearch = () => {
     // fetchCashiers 会自动触发，因为 searchTerm 是依赖项
@@ -171,7 +186,7 @@ export function CashierManagement() {
   // 查看Cashier详情
   const handleViewDetail = async (cashier: Cashier) => {
     try {
-      const response = await cashierService.getCashierDetail({ cashier_id: cashier.cashier_id });
+      const response = await cashierService.getCashierDetail({ cid: cashier.cid });
       if (response.success) {
         setSelectedCashier(response.data);
       } else {
@@ -183,14 +198,115 @@ export function CashierManagement() {
     }
   };
 
+  // 打开新增对话框
+  const handleOpenCreate = () => {
+    setFormData({
+      type: 'private',
+      bank_code: '',
+      bank_name: '',
+      card_number: '',
+      holder_name: '',
+      holder_phone: '',
+      holder_email: '',
+      country: 'IN',
+      country_code: '+91',
+      province: '',
+      city: '',
+      ccy: 'INR',
+      remark: ''
+    });
+    setShowCreateDialog(true);
+  };
+
+  // 打开编辑对话框
+  const handleOpenEdit = (cashier: Cashier) => {
+    setEditingCashier(cashier);
+    setFormData({
+      type: cashier.type,
+      bank_code: cashier.bank_code,
+      bank_name: cashier.bank_name,
+      card_number: cashier.card_number,
+      holder_name: cashier.holder_name,
+      holder_phone: cashier.holder_phone,
+      holder_email: cashier.holder_email,
+      country: cashier.country,
+      country_code: cashier.country_code,
+      province: cashier.province || '',
+      city: cashier.city || '',
+      ccy: cashier.ccy,
+      remark: cashier.remark || ''
+    });
+    setShowEditDialog(true);
+  };
+
+  // 创建Cashier
+  const handleCreate = async () => {
+    if (!formData.bank_name || !formData.card_number || !formData.holder_name || 
+        !formData.holder_phone || !formData.holder_email) {
+      toast.error('表单验证失败', '请填写所有必填字段');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const response = await cashierService.createCashier(formData);
+      if (response.success) {
+        toast.success('创建成功', 'Cashier已成功创建');
+        setShowCreateDialog(false);
+        fetchCashiers();
+        fetchStats();
+      } else {
+        toast.error('创建失败', response.msg);
+      }
+    } catch (error: any) {
+      console.error('创建Cashier失败:', error);
+      toast.error('创建失败', error.message || '网络错误，请稍后重试');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // 更新Cashier
+  const handleUpdate = async () => {
+    if (!editingCashier) return;
+
+    setSubmitting(true);
+    try {
+      const updateParams: UpdateCashierParams = {
+        cid: editingCashier.cid,
+        ...formData
+      };
+      const response = await cashierService.updateCashier(updateParams);
+      if (response.success) {
+        toast.success('更新成功', 'Cashier信息已更新');
+        setShowEditDialog(false);
+        fetchCashiers();
+        fetchStats();
+      } else {
+        toast.error('更新失败', response.msg);
+      }
+    } catch (error: any) {
+      console.error('更新Cashier失败:', error);
+      toast.error('更新失败', error.message || '网络错误，请稍后重试');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   return (
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Cashier</h1>
-        <Button onClick={handleRefresh} className="gap-2" variant="outline">
-          <RefreshCw className="h-4 w-4" />
-          刷新
-        </Button>
+        <div className="flex gap-2">
+          <Button onClick={handleOpenCreate} className="gap-2">
+            <Plus className="h-4 w-4" />
+            新增Cashier
+          </Button>
+          <Button onClick={handleRefresh} className="gap-2" variant="outline">
+            <RefreshCw className="h-4 w-4" />
+            刷新
+          </Button>
+        </div>
       </div>
 
       {/* 错误提示 */}
@@ -270,47 +386,13 @@ export function CashierManagement() {
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all">所有状态</SelectItem>
-                <SelectItem value="active">激活</SelectItem>
-                <SelectItem value="inactive">未激活</SelectItem>
-                <SelectItem value="suspended">暂停</SelectItem>
-                <SelectItem value="pending">待审核</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={typeFilter} onValueChange={setTypeFilter}>
-              <SelectTrigger className="w-full md:w-32">
-                <SelectValue placeholder="类型" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">所有类型</SelectItem>
-                <SelectItem value="admin">管理员</SelectItem>
-                <SelectItem value="cashier">出纳员</SelectItem>
-                <SelectItem value="operator">操作员</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={regionFilter} onValueChange={setRegionFilter}>
-              <SelectTrigger className="w-full md:w-32">
-                <SelectValue placeholder="地区" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">所有地区</SelectItem>
-                <SelectItem value="north">北部</SelectItem>
-                <SelectItem value="south">南部</SelectItem>
-                <SelectItem value="east">东部</SelectItem>
-                <SelectItem value="west">西部</SelectItem>
-                <SelectItem value="central">中部</SelectItem>
+                <SelectItem value="online">在线</SelectItem>
+                <SelectItem value="offline">离线</SelectItem>
               </SelectContent>
             </Select>
             <Button onClick={handleSearch} className="gap-2">
               <Search className="h-4 w-4" />
               搜索
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              高级筛选
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              导出
             </Button>
           </div>
         </CardContent>
@@ -348,8 +430,8 @@ export function CashierManagement() {
                 </TableRow>
               ) : (
                 (cashiers || []).map((cashier) => (
-                  <TableRow key={cashier.cashier_id}>
-                    <TableCell className="font-mono text-sm">{cashier.cashier_id}</TableCell>
+                  <TableRow key={cashier.cid}>
+                    <TableCell className="font-mono text-sm">{cashier.cid}</TableCell>
                     <TableCell className="font-medium">{cashier.holder_name}</TableCell>
                     <TableCell>{cashier.bank_name}</TableCell>
                     <TableCell className="font-mono text-sm">{cashier.card_number}</TableCell>
@@ -359,6 +441,13 @@ export function CashierManagement() {
                     <TableCell>{formatDateTime(cashier.created_at)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
+                        <Button 
+                          variant="ghost" 
+                          size="sm"
+                          onClick={() => handleOpenEdit(cashier)}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
                         <Dialog>
                           <DialogTrigger asChild>
                             <Button 
@@ -377,7 +466,7 @@ export function CashierManagement() {
                               <div className="grid grid-cols-2 gap-4 py-4 max-h-[500px] overflow-y-auto">
                                 <div>
                                   <label className="text-sm text-muted-foreground">Cashier ID</label>
-                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.cashier_id}</p>
+                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.cid}</p>
                                 </div>
                                 <div>
                                   <label className="text-sm text-muted-foreground">持卡人姓名</label>
@@ -438,7 +527,6 @@ export function CashierManagement() {
                                 <div>
                                   <label className="text-sm text-muted-foreground">更新时间</label>
                                   <p className="text-base font-semibold mt-1">{formatDateTime(selectedCashier.updated_at)}</p>
-                                  <p className="text-sm text-muted-foreground">{formatDateTime(selectedCashier.updatedAt)}</p>
                                 </div>
                               </div>
                             )}
@@ -453,31 +541,273 @@ export function CashierManagement() {
           </Table>
 
           {/* 分页 */}
-          <div className="flex items-center justify-between mt-4">
-            <div className="text-sm text-muted-foreground">
-              显示第 {((pagination.page - 1) * pagination.size) + 1} - {Math.min(pagination.page * pagination.size, pagination.total)} 条，共 {pagination.total} 条
+          {!loading && cashiers && cashiers.length > 0 && (
+            <div className="flex items-center justify-between mt-4">
+              <div className="text-sm text-muted-foreground">
+                显示第 {((pagination.page - 1) * pagination.size) + 1} - {Math.min(pagination.page * pagination.size, pagination.total)} 条，共 {pagination.total} 条
+              </div>
+              <div className="flex gap-2">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
+                  disabled={pagination.page <= 1 || loading}
+                >
+                  上一页
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
+                  disabled={pagination.page >= pagination.totalPages || loading}
+                >
+                  下一页
+                </Button>
+              </div>
             </div>
-            <div className="flex gap-2">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page - 1 }))}
-                disabled={pagination.page <= 1 || loading}
-              >
-                上一页
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => setPagination(prev => ({ ...prev, page: prev.page + 1 }))}
-                disabled={pagination.page >= pagination.totalPages || loading}
-              >
-                下一页
-              </Button>
-            </div>
-          </div>
+          )}
         </CardContent>
       </Card>
+
+      {/* 新增Cashier对话框 */}
+      <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>新增Cashier</DialogTitle>
+            <DialogDescription>
+              填写以下信息创建新的Cashier账户，系统将自动创建INR账户
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="create-type">账户类型 *</Label>
+              <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                <SelectTrigger id="create-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">私户</SelectItem>
+                  <SelectItem value="corporate">公户</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-bank-code">银行代码</Label>
+              <Input
+                id="create-bank-code"
+                value={formData.bank_code}
+                onChange={(e) => setFormData({...formData, bank_code: e.target.value})}
+                placeholder="如: HDFC"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-bank-name">银行名称 *</Label>
+              <Input
+                id="create-bank-name"
+                value={formData.bank_name}
+                onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
+                placeholder="如: HDFC Bank"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-card-number">卡号/UPI *</Label>
+              <Input
+                id="create-card-number"
+                value={formData.card_number}
+                onChange={(e) => setFormData({...formData, card_number: e.target.value})}
+                placeholder="银行卡号或UPI地址"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-holder-name">持卡人姓名 *</Label>
+              <Input
+                id="create-holder-name"
+                value={formData.holder_name}
+                onChange={(e) => setFormData({...formData, holder_name: e.target.value})}
+                placeholder="持卡人姓名"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-holder-phone">手机号 *</Label>
+              <Input
+                id="create-holder-phone"
+                value={formData.holder_phone}
+                onChange={(e) => setFormData({...formData, holder_phone: e.target.value})}
+                placeholder="+91 1234567890"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-holder-email">邮箱 *</Label>
+              <Input
+                id="create-holder-email"
+                type="email"
+                value={formData.holder_email}
+                onChange={(e) => setFormData({...formData, holder_email: e.target.value})}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-country">国家</Label>
+              <Input
+                id="create-country"
+                value={formData.country}
+                onChange={(e) => setFormData({...formData, country: e.target.value})}
+                placeholder="IN"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-province">省/邦</Label>
+              <Input
+                id="create-province"
+                value={formData.province}
+                onChange={(e) => setFormData({...formData, province: e.target.value})}
+                placeholder="如: Maharashtra"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-city">城市</Label>
+              <Input
+                id="create-city"
+                value={formData.city}
+                onChange={(e) => setFormData({...formData, city: e.target.value})}
+                placeholder="如: Mumbai"
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="create-remark">备注</Label>
+              <Input
+                id="create-remark"
+                value={formData.remark}
+                onChange={(e) => setFormData({...formData, remark: e.target.value})}
+                placeholder="备注信息"
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowCreateDialog(false)} disabled={submitting}>
+              取消
+            </Button>
+            <Button onClick={handleCreate} disabled={submitting}>
+              {submitting ? '创建中...' : '创建'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      {/* 编辑Cashier对话框 */}
+      <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>编辑Cashier</DialogTitle>
+            <DialogDescription>
+              修改Cashier信息
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="edit-type">账户类型</Label>
+              <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
+                <SelectTrigger id="edit-type">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="private">私户</SelectItem>
+                  <SelectItem value="corporate">公户</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-bank-code">银行代码</Label>
+              <Input
+                id="edit-bank-code"
+                value={formData.bank_code}
+                onChange={(e) => setFormData({...formData, bank_code: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-bank-name">银行名称</Label>
+              <Input
+                id="edit-bank-name"
+                value={formData.bank_name}
+                onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-card-number">卡号/UPI</Label>
+              <Input
+                id="edit-card-number"
+                value={formData.card_number}
+                onChange={(e) => setFormData({...formData, card_number: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-holder-name">持卡人姓名</Label>
+              <Input
+                id="edit-holder-name"
+                value={formData.holder_name}
+                onChange={(e) => setFormData({...formData, holder_name: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-holder-phone">手机号</Label>
+              <Input
+                id="edit-holder-phone"
+                value={formData.holder_phone}
+                onChange={(e) => setFormData({...formData, holder_phone: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-holder-email">邮箱</Label>
+              <Input
+                id="edit-holder-email"
+                type="email"
+                value={formData.holder_email}
+                onChange={(e) => setFormData({...formData, holder_email: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-country">国家</Label>
+              <Input
+                id="edit-country"
+                value={formData.country}
+                onChange={(e) => setFormData({...formData, country: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-province">省/邦</Label>
+              <Input
+                id="edit-province"
+                value={formData.province}
+                onChange={(e) => setFormData({...formData, province: e.target.value})}
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-city">城市</Label>
+              <Input
+                id="edit-city"
+                value={formData.city}
+                onChange={(e) => setFormData({...formData, city: e.target.value})}
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="edit-remark">备注</Label>
+              <Input
+                id="edit-remark"
+                value={formData.remark}
+                onChange={(e) => setFormData({...formData, remark: e.target.value})}
+              />
+            </div>
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button variant="outline" onClick={() => setShowEditDialog(false)} disabled={submitting}>
+              取消
+            </Button>
+            <Button onClick={handleUpdate} disabled={submitting}>
+              {submitting ? '保存中...' : '保存'}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Search, Filter, Download, RefreshCw } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 import { 
   transactionService, 
   TransactionInfo, 
@@ -332,14 +332,6 @@ export function PayinRecords() {
               <Search className="h-4 w-4" />
               搜索
             </Button>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              高级筛选
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              导出
-            </Button>
           </div>
         </CardContent>
       </Card>
@@ -351,6 +343,7 @@ export function PayinRecords() {
             <TableHeader>
               <TableRow>
                 <TableHead>交易ID</TableHead>
+                <TableHead>CashierID</TableHead>
                 <TableHead>金额</TableHead>
                 <TableHead>支付方式</TableHead>
                 <TableHead>状态</TableHead>
@@ -364,6 +357,7 @@ export function PayinRecords() {
               {records.map((record) => (
                 <TableRow key={record.trxID}>
                   <TableCell className="font-mono text-sm">{record.trxID}</TableCell>
+                  <TableCell className="font-mono text-sm">{record.cashierID || '-'}</TableCell>
                   <TableCell>
                     {formatCurrencyForModal(record.amount, record.ccy)}
                   </TableCell>
@@ -395,62 +389,26 @@ export function PayinRecords() {
                                 <p className="text-base font-semibold font-mono mt-1">{selectedRecord.trxID}</p>
                               </div>
                               <div>
-                                <label className="text-sm text-muted-foreground">交易金额</label>
-                                <p className="text-base font-semibold mt-1">
-                                  {formatCurrencyForModal(selectedRecord.amount, selectedRecord.ccy)}
-                                </p>
+                                <label className="text-sm text-muted-foreground">币种</label>
+                                <p className="text-base font-semibold mt-1">{selectedRecord.ccy}</p>
+                              </div>
+                              <div>
+                                <label className="text-sm text-muted-foreground">金额</label>
+                                <p className="text-base font-semibold mt-1">{selectedRecord.amount}</p>
                               </div>
                               <div>
                                 <label className="text-sm text-muted-foreground">支付方式</label>
                                 <p className="text-base font-semibold mt-1">{selectedRecord.trxMethod || '-'}</p>
                               </div>
                               <div>
-                                <label className="text-sm text-muted-foreground">交易模式</label>
-                                <p className="text-base font-semibold mt-1">{selectedRecord.trxMode || '-'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">交易状态</label>
-                                <p className="text-base font-semibold mt-1">{getStatusBadge(selectedRecord.status)}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">响应码</label>
-                                <p className="text-base font-semibold mt-1">{selectedRecord.resCode || '-'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">响应消息</label>
-                                <p className="text-base font-semibold mt-1">{selectedRecord.resMsg || '-'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">失败原因</label>
-                                <p className="text-base font-semibold mt-1">{selectedRecord.reason || '-'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">支付链接</label>
-                                <p className="text-base font-semibold mt-1">
-                                  {selectedRecord.link ? (
-                                    <a href={selectedRecord.link} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline">
-                                      打开链接
-                                    </a>
-                                  ) : '-'}
-                                </p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">渠道交易ID</label>
-                                <p className="text-base font-semibold font-mono mt-1">{selectedRecord.channelTrxID || '-'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">手续费</label>
-                                <p className="text-base font-semibold mt-1">
-                                  {selectedRecord.feeAmount ? formatCurrency(selectedRecord.feeAmount, selectedRecord.feeCcy || selectedRecord.ccy) : '-'}
-                                </p>
-                              </div>
-                              <div>
                                 <label className="text-sm text-muted-foreground">创建时间</label>
                                 <p className="text-base font-semibold mt-1">{formatDateTime(selectedRecord.createdAt)}</p>
                               </div>
                               <div>
-                                <label className="text-sm text-muted-foreground">更新时间</label>
-                                <p className="text-base font-semibold mt-1">{formatDateTime(selectedRecord.updatedAt)}</p>
+                                <label className="text-sm text-muted-foreground">过期时间</label>
+                                <p className="text-base font-semibold mt-1">
+                                  {selectedRecord.expiredAt ? formatDateTime(selectedRecord.expiredAt) : '-'}
+                                </p>
                               </div>
                               <div>
                                 <label className="text-sm text-muted-foreground">确认时间</label>
@@ -465,41 +423,15 @@ export function PayinRecords() {
                                 </p>
                               </div>
                               <div>
-                                <label className="text-sm text-muted-foreground">过期时间</label>
+                                <label className="text-sm text-muted-foreground">凭证ID</label>
+                                <p className="text-base font-semibold font-mono mt-1">{selectedRecord.referenceID || '-'}</p>
+                              </div>
+                              <div>
+                                <label className="text-sm text-muted-foreground">费用</label>
                                 <p className="text-base font-semibold mt-1">
-                                  {selectedRecord.expiredAt ? formatDateTime(selectedRecord.expiredAt) : '-'}
+                                  {selectedRecord.feeAmount ? `${selectedRecord.feeCcy || selectedRecord.ccy} ${selectedRecord.feeAmount}` : '-'}
                                 </p>
                               </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">流水号</label>
-                                <p className="text-base font-semibold font-mono mt-1">{selectedRecord.flowNo || '-'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">国家</label>
-                                <p className="text-base font-semibold mt-1">{selectedRecord.country || '-'}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">已退款次数</label>
-                                <p className="text-base font-semibold mt-1">{selectedRecord.refundedCount || 0}</p>
-                              </div>
-                              <div>
-                                <label className="text-sm text-muted-foreground">已退款金额</label>
-                                <p className="text-base font-semibold mt-1">
-                                  {selectedRecord.refundedAmount ? formatCurrency(selectedRecord.refundedAmount, selectedRecord.ccy) : '-'}
-                                </p>
-                              </div>
-                              <div className="col-span-2">
-                                <label className="text-sm text-muted-foreground">备注</label>
-                                <p className="text-base font-semibold mt-1">{selectedRecord.remark || '-'}</p>
-                              </div>
-                              {selectedRecord.detail && (
-                                <div className="col-span-2">
-                                  <label className="text-sm text-muted-foreground">详细信息</label>
-                                  <pre className="text-xs text-muted-foreground bg-muted p-2 rounded mt-1 max-h-32 overflow-y-auto">
-                                    {JSON.stringify(JSON.parse(selectedRecord.detail), null, 2)}
-                                  </pre>
-                                </div>
-                              )}
                             </div>
                           )}
                         </DialogContent>

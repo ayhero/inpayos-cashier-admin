@@ -6,7 +6,7 @@ import { Input } from './ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
-import { Search, Filter, Download } from 'lucide-react';
+import { Search } from 'lucide-react';
 import { 
   transactionService, 
   TransactionInfo, 
@@ -324,14 +324,6 @@ export function PayoutRecords() {
             <Button onClick={handleSearch} className="gap-2">
               <Search className="h-4 w-4" />
               搜索
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              高级筛选
-            </Button>
-            <Button variant="outline" className="gap-2">
-              <Download className="h-4 w-4" />
-              导出
             </Button>
           </div>
         </CardContent>

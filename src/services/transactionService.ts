@@ -76,7 +76,7 @@ interface BackendTransactionInfo {
   actual_amount?: string;
   usd_amount?: string;
   link?: string;
-  createdAt: number; // 毫秒时间戳
+  created_at: number; // 毫秒时间戳
   updated_at: number; // 毫秒时间戳
   completed_at?: number; // 毫秒时间戳
   confirmed_at?: number; // 毫秒时间戳
@@ -108,6 +108,8 @@ interface BackendTransactionInfo {
   mid?: string;
   product_id?: string;
   version?: number;
+  cid?: string;
+  reference_id?: string;
 }
 
 // 统一交易信息接口 - 与后端 protocol.TransactionInfo 保持一致
@@ -154,6 +156,8 @@ export interface TransactionInfo {
   refundedUsdAmount?: string;
   lastRefundedAt?: string;
   detail?: string;
+  cashierID?: string;
+  referenceID?: string;
 }
 
 // 查询参数接口
@@ -240,6 +244,8 @@ const convertBackendToFrontend = (backend: BackendTransactionInfo): TransactionI
     refundedUsdAmount: backend.refunded_usd_amount,
     lastRefundedAt: timestampToISOString(backend.last_refunded_at),
     detail: backend.detail ? JSON.stringify(backend.detail) : undefined,
+    cashierID: backend.cid,
+    referenceID: backend.reference_id,
   };
 };
 

@@ -240,10 +240,6 @@ export function RefundRecords() {
               搜索
             </Button>
             <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              高级筛选
-            </Button>
-            <Button variant="outline" className="gap-2">
               <Download className="h-4 w-4" />
               导出
             </Button>

@@ -3,7 +3,7 @@ import { api, ApiResponse } from './api';
 // 出纳员信息接口
 export interface Cashier {
   id: number;
-  cashier_id: string;
+  cid: string;
   type: string;
   bank_code: string;
   bank_name: string;
@@ -32,7 +32,7 @@ export type CashierTeam = Cashier;
 
 // 出纳员列表查询参数
 export interface CashierListParams {
-  cashier_id?: string;
+  cid?: string;
   type?: string;
   bank_code?: string;
   card_number?: string;
@@ -63,7 +63,45 @@ export interface PaginatedResponse<T> {
 
 // 出纳员详情参数
 export interface CashierDetailParams {
-  cashier_id: string;
+  cid: string;
+}
+
+// 创建出纳员参数
+export interface CreateCashierParams {
+  type: string;
+  bank_code: string;
+  bank_name: string;
+  card_number: string;
+  holder_name: string;
+  holder_phone: string;
+  holder_email: string;
+  country: string;
+  country_code: string;
+  province?: string;
+  city?: string;
+  ccy: string;
+  expire_at?: number;
+  remark?: string;
+}
+
+// 更新出纳员参数
+export interface UpdateCashierParams {
+  cid: string;
+  type?: string;
+  bank_code?: string;
+  bank_name?: string;
+  card_number?: string;
+  holder_name?: string;
+  holder_phone?: string;
+  holder_email?: string;
+  country?: string;
+  country_code?: string;
+  province?: string;
+  city?: string;
+  ccy?: string;
+  status?: string;
+  expire_at?: number;
+  remark?: string;
 }
 
 // 出纳员统计数据
@@ -91,7 +129,7 @@ class CashierService {
       return {
         code: response.code,
         msg: response.msg,
-        data,
+        data: data,
         success: response.code === '0000'
       };
     } catch (error: any) {
@@ -110,9 +148,9 @@ class CashierService {
   }
 
   // 获取出纳员详情
-  async getCashierDetail(params: CashierDetailParams): Promise<ApiResponse<CashierTeam>> {
+  async getCashierDetail(params: CashierDetailParams): Promise<ApiResponse<Cashier>> {
     try {
-      const response = await api.post<CashierTeam>('/cashier/detail', params);
+      const response = await api.post<Cashier>('/cashier/detail', params);
       return {
         ...response,
         success: response.code === '0000'
@@ -122,7 +160,7 @@ class CashierService {
       return {
         code: '9999',
         msg: error.message || '获取出纳员详情失败',
-        data: {} as CashierTeam,
+        data: {} as Cashier,
         success: false
       };
     }
@@ -147,6 +185,44 @@ class CashierService {
           online: 0,
           suspended: 0
         },
+        success: false
+      };
+    }
+  }
+
+  // 创建出纳员
+  async createCashier(params: CreateCashierParams): Promise<ApiResponse<Cashier>> {
+    try {
+      const response = await api.post<Cashier>('/cashier/create', params);
+      return {
+        ...response,
+        success: response.code === '0000'
+      };
+    } catch (error: any) {
+      console.error('创建出纳员失败:', error);
+      return {
+        code: '9999',
+        msg: error.message || '创建出纳员失败',
+        data: {} as Cashier,
+        success: false
+      };
+    }
+  }
+
+  // 更新出纳员
+  async updateCashier(params: UpdateCashierParams): Promise<ApiResponse<Cashier>> {
+    try {
+      const response = await api.post<Cashier>('/cashier/update', params);
+      return {
+        ...response,
+        success: response.code === '0000'
+      };
+    } catch (error: any) {
+      console.error('更新出纳员失败:', error);
+      return {
+        code: '9999',
+        msg: error.message || '更新出纳员失败',
+        data: {} as Cashier,
         success: false
       };
     }

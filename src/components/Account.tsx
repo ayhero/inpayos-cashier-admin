@@ -344,10 +344,6 @@ export function Account() {
                 <SelectItem value="locked">锁定</SelectItem>
               </SelectContent>
             </Select>
-            <Button variant="outline" className="gap-2">
-              <Filter className="h-4 w-4" />
-              高级筛选
-            </Button>
           </div>
         </CardContent>
       </Card>

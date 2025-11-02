@@ -7,7 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from './ui/table';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from './ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
-import { Search, Filter, Download, Eye, Calendar, TrendingUp } from 'lucide-react';
+import { Search, Eye, Calendar, TrendingUp } from 'lucide-react';
 
 const settlementRecords = [
   {
@@ -230,14 +230,6 @@ export function SettlementRecords() {
                     <SelectItem value="daily">日结算</SelectItem>
                   </SelectContent>
                 </Select>
-                <Button variant="outline" className="gap-2">
-                  <Filter className="h-4 w-4" />
-                  高级筛选
-                </Button>
-                <Button variant="outline" className="gap-2">
-                  <Download className="h-4 w-4" />
-                  导出
-                </Button>
               </div>
             </CardContent>
           </Card>

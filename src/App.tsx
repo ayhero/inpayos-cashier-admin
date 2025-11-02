@@ -16,14 +16,14 @@ import {
   Building2,
   Menu,
   KeyRound,
-  Users
+  Users,
+  FileText
 } from 'lucide-react';
 
 import { AuthContainer } from './components/AuthContainer';
 import { Dashboard } from './components/Dashboard';
 import { PayinRecords } from './components/Payin';
 import { PayoutRecords } from './components/Payout';
-import { Config } from './components/Config';
 // import { RefundRecords } from './components/RefundRecords';
 // import { RechargeRecords } from './components/RechargeRecords';
 import { SettlementRecords } from './components/SettlementRecords';
@@ -31,13 +31,14 @@ import { AccountBalance } from './components/AccountBalance';
 import { ChangePasswordPage } from './components/ChangePasswordPage';
 import { ToastContainer } from './components/Toast';
 import { CashierManagement } from './components/CashierManagement';
+import { CashierContract } from './components/CashierContract';
 
 export default function App() {
   const [activeMenu, setActiveMenu] = useState('dashboard');
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [showChangePasswordDialog, setShowChangePasswordDialog] = useState(false);
   const [merchantInfo, setMerchantInfo] = useState<UserInfo | null>(null);
-  const { isLoggedIn, currentUser, login, logout } = useAuthStore();
+  const { isLoggedIn, currentUser, login, logout, updateUser } = useAuthStore();
 
   const handleLogin = (userInfo: UserType, token: string, refreshToken?: string) => {
     login(userInfo, token, refreshToken);
@@ -60,17 +61,24 @@ export default function App() {
   // 获取商户信息
   useEffect(() => {
     if (isLoggedIn) {
+      console.log('App: 用户已登录，开始获取用户信息');
       UserService.getUserInfo()
         .then(response => {
+          console.log('App: getUserInfo 响应:', response);
           if (response.code === '0000') {
             setMerchantInfo(response.data);
+            console.log('App: UserInfo 数据:', response.data);
+            // 更新 authStore 中的 currentUser，添加 cid
+            const cid = response.data.cid || response.data.mid;
+            console.log('App: 更新 currentUser，cid:', cid);
+            updateUser({ cid });
           }
         })
         .catch(error => {
           console.error('获取商户信息失败:', error);
         });
     }
-  }, [isLoggedIn]);
+  }, [isLoggedIn, updateUser]);
 
   const menuItems = [
     {
@@ -123,10 +131,10 @@ export default function App() {
       component: AccountBalance
     },
     {
-      id: 'config',
-      label: '配置',
-      icon: Settings,
-      component: Config
+      id: 'contract',
+      label: '合同',
+      icon: FileText,
+      component: CashierContract
     },
 
   ];
@@ -262,10 +270,6 @@ export default function App() {
                   <DropdownMenuItem onClick={() => setShowChangePasswordDialog(true)}>
                     <KeyRound className="mr-2 h-4 w-4" />
                     修改密码
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => setActiveMenu('config')}>
-                    <Settings className="mr-2 h-4 w-4" />
-                    设置
                   </DropdownMenuItem>
                   <DropdownMenuSeparator />
                   <DropdownMenuItem onClick={handleLogout}>
