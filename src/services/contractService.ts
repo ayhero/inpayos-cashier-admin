@@ -55,8 +55,6 @@ export interface Contract {
 // 合约列表查询参数
 export interface ContractListParams {
   contract_id?: string;
-  sid?: string;
-  stype?: string;
   status?: string;
   page: number;
   size: number;
@@ -151,13 +149,10 @@ class ContractService {
   }
 
   // 获取合约统计数据
-  async getContractStats(sid?: string, stype?: string): Promise<ApiResponse<ContractStats>> {
+  async getContractStats(): Promise<ApiResponse<ContractStats>> {
     try {
-      const params: any = {};
-      if (sid) params.sid = sid;
-      if (stype) params.stype = stype;
-      
-      const response = await api.post<ContractStats>('/contract/stats', params);
+      // 后端会从JWT token中自动获取tid和stype，不需要传递参数
+      const response = await api.post<ContractStats>('/contract/stats', {});
       return {
         success: response.code === '0000',
         code: response.code,

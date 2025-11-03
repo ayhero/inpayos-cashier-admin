@@ -25,14 +25,9 @@ export function CashierContract() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchStats = useCallback(async () => {
-    const cid = currentUser?.cid;
-    if (!cid) {
-      console.log('CashierContract: 无法获取统计数据，cid 为空');
-      return;
-    }
-    console.log('CashierContract: 开始获取统计数据，cid:', cid);
     try {
-      const response = await contractService.getContractStats(cid, 'cashier_team');
+      // 后端会从JWT token中获取tid，不需要传递参数
+      const response = await contractService.getContractStats();
       if (response.success) {
         setStats(response.data);
         console.log('CashierContract: 统计数据获取成功:', response.data);
@@ -42,23 +37,17 @@ export function CashierContract() {
     } catch (error: any) {
       console.error('获取统计数据失败:', error);
     }
-  }, [currentUser?.cid]);
+  }, []);
 
   const fetchContracts = useCallback(async () => {
-    const cid = currentUser?.cid;
-    if (!cid) {
-      console.log('CashierContract: 无法获取合约列表，cid 为空');
-      return;
-    }
-    console.log('CashierContract: 开始获取合约列表，cid:', cid);
+    console.log('CashierContract: 开始获取合约列表');
     setLoading(true);
     setError(null);
     try {
+      // 后端会从JWT token中获取tid和stype，不需要前端传递
       const params: ContractListParams = {
         page: 1,
-        size: 1000,
-        stype: 'cashier_team',
-        sid: cid
+        size: 1000
       };
       console.log('CashierContract: 请求参数:', params);
 
@@ -79,18 +68,19 @@ export function CashierContract() {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.cid]);
+  }, []);
 
   useEffect(() => {
     console.log('CashierContract useEffect 触发, currentUser:', currentUser);
-    if (currentUser?.cid) {
-      console.log('CashierContract: currentUser.cid 存在，准备请求数据');
+    // 只要用户已登录就请求数据（后端从JWT获取tid）
+    if (currentUser) {
+      console.log('CashierContract: currentUser 存在，准备请求数据');
       fetchContracts();
       fetchStats();
     } else {
-      console.log('CashierContract: currentUser.cid 不存在，跳过请求');
+      console.log('CashierContract: currentUser 不存在，跳过请求');
     }
-  }, [currentUser?.cid, fetchContracts, fetchStats]);
+  }, [currentUser, fetchContracts, fetchStats]);
 
   const handleRefresh = () => {
     fetchContracts();

@@ -38,18 +38,17 @@ export function CashierManagement() {
   const [showEditDialog, setShowEditDialog] = useState(false);
   const [editingCashier, setEditingCashier] = useState<Cashier | null>(null);
   const [formData, setFormData] = useState<CreateCashierParams>({
-    type: 'private',
+    user_id: '',
+    app_type: 'freecharge',
+    app_account: '',
+    upi: '',
+    provider: '',
     bank_code: '',
     bank_name: '',
     card_number: '',
     holder_name: '',
     holder_phone: '',
     holder_email: '',
-    country: 'IN',
-    country_code: '+91',
-    province: '',
-    city: '',
-    ccy: 'INR',
     remark: ''
   });
   const [submitting, setSubmitting] = useState(false);
@@ -81,11 +80,13 @@ export function CashierManagement() {
         params.online_status = statusFilter;
       }
       if (searchTerm) {
-        // 支持按持卡人姓名、邮箱、电话、卡号搜索
+        // 支持按持卡人姓名、手机、UPI、账户ID搜索
         if (searchTerm.includes('@')) {
-          params.holder_email = searchTerm;
-        } else if (/^\d+$/.test(searchTerm)) {
+          params.upi = searchTerm;
+        } else if (/^\d+$/.test(searchTerm) && searchTerm.length >= 10) {
           params.holder_phone = searchTerm;
+        } else if (searchTerm.startsWith('C') || searchTerm.startsWith('U')) {
+          params.account_id = searchTerm;
         } else {
           params.holder_name = searchTerm;
         }
@@ -163,19 +164,23 @@ export function CashierManagement() {
     return <Badge variant={variant} className={className}>{label}</Badge>;
   };
 
-  const getTypeBadge = (type: string) => {
-    const getTypeConfig = (type: string) => {
-      switch (type?.toLowerCase()) {
-        case 'private':
-          return { label: '私户', variant: 'default' as const, className: 'bg-blue-500' };
-        case 'corporate':
-          return { label: '公户', variant: 'secondary' as const, className: 'bg-purple-500' };
+  const getOnlineStatusBadge = (onlineStatus: string) => {
+    const getOnlineStatusConfig = (status: string) => {
+      switch (status?.toLowerCase()) {
+        case 'online':
+          return { label: '在线', variant: 'default' as const, className: 'bg-green-500' };
+        case 'offline':
+          return { label: '离线', variant: 'secondary' as const, className: 'bg-gray-500' };
+        case 'busy':
+          return { label: '忙碌', variant: 'secondary' as const, className: 'bg-yellow-500' };
+        case 'locked':
+          return { label: '锁定', variant: 'destructive' as const, className: '' };
         default:
-          return { label: type || '-', variant: 'outline' as const, className: '' };
+          return { label: status || '-', variant: 'outline' as const, className: '' };
       }
     };
     
-    const { label, variant, className } = getTypeConfig(type);
+    const { label, variant, className } = getOnlineStatusConfig(onlineStatus);
     return <Badge variant={variant} className={className}>{label}</Badge>;
   };
 
@@ -186,7 +191,9 @@ export function CashierManagement() {
   // 查看Cashier详情
   const handleViewDetail = async (cashier: Cashier) => {
     try {
-      const response = await cashierService.getCashierDetail({ cid: cashier.cid });
+      const response = await cashierService.getCashierDetail({ 
+        account_id: cashier.account_id 
+      });
       if (response.success) {
         setSelectedCashier(response.data);
       } else {
@@ -201,18 +208,17 @@ export function CashierManagement() {
   // 打开新增对话框
   const handleOpenCreate = () => {
     setFormData({
-      type: 'private',
+      user_id: '',
+      app_type: 'freecharge',
+      app_account: '',
+      upi: '',
+      provider: '',
       bank_code: '',
       bank_name: '',
       card_number: '',
       holder_name: '',
       holder_phone: '',
       holder_email: '',
-      country: 'IN',
-      country_code: '+91',
-      province: '',
-      city: '',
-      ccy: 'INR',
       remark: ''
     });
     setShowCreateDialog(true);
@@ -222,18 +228,17 @@ export function CashierManagement() {
   const handleOpenEdit = (cashier: Cashier) => {
     setEditingCashier(cashier);
     setFormData({
-      type: cashier.type,
-      bank_code: cashier.bank_code,
-      bank_name: cashier.bank_name,
-      card_number: cashier.card_number,
+      user_id: cashier.user_id,
+      app_type: cashier.app_type,
+      app_account: cashier.app_account,
+      upi: cashier.upi || '',
+      provider: cashier.provider || '',
+      bank_code: cashier.bank_code || '',
+      bank_name: cashier.bank_name || '',
+      card_number: cashier.card_number || '',
       holder_name: cashier.holder_name,
       holder_phone: cashier.holder_phone,
-      holder_email: cashier.holder_email,
-      country: cashier.country,
-      country_code: cashier.country_code,
-      province: cashier.province || '',
-      city: cashier.city || '',
-      ccy: cashier.ccy,
+      holder_email: cashier.holder_email || '',
       remark: cashier.remark || ''
     });
     setShowEditDialog(true);
@@ -241,8 +246,8 @@ export function CashierManagement() {
 
   // 创建Cashier
   const handleCreate = async () => {
-    if (!formData.bank_name || !formData.card_number || !formData.holder_name || 
-        !formData.holder_phone || !formData.holder_email) {
+    if (!formData.user_id || !formData.app_type || !formData.app_account || 
+        !formData.holder_name || !formData.holder_phone) {
       toast.error('表单验证失败', '请填写所有必填字段');
       return;
     }
@@ -273,7 +278,7 @@ export function CashierManagement() {
     setSubmitting(true);
     try {
       const updateParams: UpdateCashierParams = {
-        cid: editingCashier.cid,
+        account_id: editingCashier.account_id,
         ...formData
       };
       const response = await cashierService.updateCashier(updateParams);
@@ -404,13 +409,15 @@ export function CashierManagement() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Cashier ID</TableHead>
+                <TableHead>Account ID</TableHead>
+                <TableHead>User ID</TableHead>
+                <TableHead>APP账号</TableHead>
                 <TableHead>持卡人</TableHead>
                 <TableHead>银行</TableHead>
-                <TableHead>卡号/UPI</TableHead>
+                <TableHead>UPI/卡号</TableHead>
                 <TableHead>电话</TableHead>
-                <TableHead>类型</TableHead>
-                <TableHead>状态</TableHead>
+                <TableHead>账户状态</TableHead>
+                <TableHead>在线状态</TableHead>
                 <TableHead>创建时间</TableHead>
                 <TableHead>操作</TableHead>
               </TableRow>
@@ -418,26 +425,28 @@ export function CashierManagement() {
             <TableBody>
               {loading ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-4">
+                  <TableCell colSpan={11} className="text-center py-4">
                     加载中...
                   </TableCell>
                 </TableRow>
               ) : !cashiers || cashiers.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={9} className="text-center py-4 text-muted-foreground">
+                  <TableCell colSpan={11} className="text-center py-4 text-muted-foreground">
                     暂无数据
                   </TableCell>
                 </TableRow>
               ) : (
                 (cashiers || []).map((cashier) => (
-                  <TableRow key={cashier.cid}>
-                    <TableCell className="font-mono text-sm">{cashier.cid}</TableCell>
+                  <TableRow key={cashier.account_id}>
+                    <TableCell className="font-mono text-xs">{cashier.account_id}</TableCell>
+                    <TableCell className="font-mono text-xs">{cashier.user_id}</TableCell>
+                    <TableCell className="font-mono text-xs">{cashier.app_account}</TableCell>
                     <TableCell className="font-medium">{cashier.holder_name}</TableCell>
                     <TableCell>{cashier.bank_name}</TableCell>
-                    <TableCell className="font-mono text-sm">{cashier.card_number}</TableCell>
+                    <TableCell className="font-mono text-sm">{cashier.upi || cashier.card_number}</TableCell>
                     <TableCell>{cashier.holder_phone}</TableCell>
-                    <TableCell>{getTypeBadge(cashier.type)}</TableCell>
                     <TableCell>{getStatusBadge(cashier.status)}</TableCell>
+                    <TableCell>{getOnlineStatusBadge(cashier.online_status)}</TableCell>
                     <TableCell>{formatDateTime(cashier.created_at)}</TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -465,12 +474,28 @@ export function CashierManagement() {
                             {selectedCashier && (
                               <div className="grid grid-cols-2 gap-4 py-4 max-h-[500px] overflow-y-auto">
                                 <div>
-                                  <label className="text-sm text-muted-foreground">Cashier ID</label>
-                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.cid}</p>
+                                  <label className="text-sm text-muted-foreground">Account ID</label>
+                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.account_id}</p>
                                 </div>
                                 <div>
-                                  <label className="text-sm text-muted-foreground">持卡人姓名</label>
-                                  <p className="text-base font-semibold mt-1">{selectedCashier.holder_name}</p>
+                                  <label className="text-sm text-muted-foreground">User ID</label>
+                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.user_id}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">APP类型</label>
+                                  <p className="text-base font-semibold mt-1">{selectedCashier.app_type}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">APP账号</label>
+                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.app_account}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">UPI ID</label>
+                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.upi || '-'}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">UPI提供商</label>
+                                  <p className="text-base font-semibold mt-1">{selectedCashier.provider || '-'}</p>
                                 </div>
                                 <div>
                                   <label className="text-sm text-muted-foreground">银行代码</label>
@@ -481,8 +506,12 @@ export function CashierManagement() {
                                   <p className="text-base font-semibold mt-1">{selectedCashier.bank_name}</p>
                                 </div>
                                 <div>
-                                  <label className="text-sm text-muted-foreground">卡号/UPI</label>
-                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.card_number}</p>
+                                  <label className="text-sm text-muted-foreground">银行卡号</label>
+                                  <p className="text-base font-semibold font-mono mt-1">{selectedCashier.card_number || '-'}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">持卡人姓名</label>
+                                  <p className="text-base font-semibold mt-1">{selectedCashier.holder_name}</p>
                                 </div>
                                 <div>
                                   <label className="text-sm text-muted-foreground">持卡人电话</label>
@@ -490,31 +519,23 @@ export function CashierManagement() {
                                 </div>
                                 <div>
                                   <label className="text-sm text-muted-foreground">持卡人邮箱</label>
-                                  <p className="text-base font-semibold mt-1">{selectedCashier.holder_email}</p>
+                                  <p className="text-base font-semibold mt-1">{selectedCashier.holder_email || '-'}</p>
                                 </div>
                                 <div>
-                                  <label className="text-sm text-muted-foreground">类型</label>
-                                  <p className="mt-1">{getTypeBadge(selectedCashier.type)}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm text-muted-foreground">国家</label>
-                                  <p className="text-base font-semibold mt-1">{selectedCashier.country || '-'}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm text-muted-foreground">省份</label>
-                                  <p className="text-base font-semibold mt-1">{selectedCashier.province || '-'}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm text-muted-foreground">城市</label>
-                                  <p className="text-base font-semibold mt-1">{selectedCashier.city || '-'}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm text-muted-foreground">币种</label>
-                                  <p className="text-base font-semibold mt-1">{selectedCashier.ccy}</p>
-                                </div>
-                                <div>
-                                  <label className="text-sm text-muted-foreground">状态</label>
+                                  <label className="text-sm text-muted-foreground">账户状态</label>
                                   <p className="mt-1">{getStatusBadge(selectedCashier.status)}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">在线状态</label>
+                                  <p className="mt-1">{getOnlineStatusBadge(selectedCashier.online_status)}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">代收状态</label>
+                                  <p className="text-base font-semibold mt-1">{selectedCashier.payin_status}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">代付状态</label>
+                                  <p className="text-base font-semibold mt-1">{selectedCashier.payout_status}</p>
                                 </div>
                                 <div>
                                   <label className="text-sm text-muted-foreground">备注</label>
@@ -527,6 +548,10 @@ export function CashierManagement() {
                                 <div>
                                   <label className="text-sm text-muted-foreground">更新时间</label>
                                   <p className="text-base font-semibold mt-1">{formatDateTime(selectedCashier.updated_at)}</p>
+                                </div>
+                                <div>
+                                  <label className="text-sm text-muted-foreground">绑定时间</label>
+                                  <p className="text-base font-semibold mt-1">{cashier.bound_at ? formatDateTime(selectedCashier.bound_at) : '-'}</p>
                                 </div>
                               </div>
                             )}
@@ -571,25 +596,63 @@ export function CashierManagement() {
 
       {/* 新增Cashier对话框 */}
       <Dialog open={showCreateDialog} onOpenChange={setShowCreateDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>新增Cashier</DialogTitle>
+            <DialogTitle>新增Cashier账户</DialogTitle>
             <DialogDescription>
-              填写以下信息创建新的Cashier账户，系统将自动创建INR账户
+              填写以下信息创建新的Cashier账户
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
             <div className="space-y-2">
-              <Label htmlFor="create-type">账户类型 *</Label>
-              <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                <SelectTrigger id="create-type">
+              <Label htmlFor="create-user-id">User ID *</Label>
+              <Input
+                id="create-user-id"
+                value={formData.user_id}
+                onChange={(e) => setFormData({...formData, user_id: e.target.value})}
+                placeholder="收银员用户ID"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-app-type">APP类型 *</Label>
+              <Select value={formData.app_type} onValueChange={(value) => setFormData({...formData, app_type: value})}>
+                <SelectTrigger id="create-app-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="private">私户</SelectItem>
-                  <SelectItem value="corporate">公户</SelectItem>
+                  <SelectItem value="freecharge">Freecharge</SelectItem>
+                  <SelectItem value="paytm">Paytm</SelectItem>
+                  <SelectItem value="phonepe">PhonePe</SelectItem>
+                  <SelectItem value="gpay">Google Pay</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="create-app-account">APP账号ID *</Label>
+              <Input
+                id="create-app-account"
+                value={formData.app_account}
+                onChange={(e) => setFormData({...formData, app_account: e.target.value})}
+                placeholder="绑定的APP账号ID"
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="create-upi">UPI ID</Label>
+              <Input
+                id="create-upi"
+                value={formData.upi}
+                onChange={(e) => setFormData({...formData, upi: e.target.value})}
+                placeholder="如: 9876543001@paytm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="create-provider">UPI提供商</Label>
+              <Input
+                id="create-provider"
+                value={formData.provider}
+                onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                placeholder="如: Paytm, PhonePe"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="create-bank-code">银行代码</Label>
@@ -597,25 +660,25 @@ export function CashierManagement() {
                 id="create-bank-code"
                 value={formData.bank_code}
                 onChange={(e) => setFormData({...formData, bank_code: e.target.value})}
-                placeholder="如: HDFC"
+                placeholder="如: UPI, HDFC"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="create-bank-name">银行名称 *</Label>
+              <Label htmlFor="create-bank-name">银行名称</Label>
               <Input
                 id="create-bank-name"
                 value={formData.bank_name}
                 onChange={(e) => setFormData({...formData, bank_name: e.target.value})}
-                placeholder="如: HDFC Bank"
+                placeholder="如: SBI UPI, HDFC Bank"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="create-card-number">卡号/UPI *</Label>
+              <Label htmlFor="create-card-number">银行卡号</Label>
               <Input
                 id="create-card-number"
                 value={formData.card_number}
                 onChange={(e) => setFormData({...formData, card_number: e.target.value})}
-                placeholder="银行卡号或UPI地址"
+                placeholder="银行卡号（如有）"
               />
             </div>
             <div className="space-y-2">
@@ -633,44 +696,17 @@ export function CashierManagement() {
                 id="create-holder-phone"
                 value={formData.holder_phone}
                 onChange={(e) => setFormData({...formData, holder_phone: e.target.value})}
-                placeholder="+91 1234567890"
+                placeholder="+91-9876543001"
               />
             </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-holder-email">邮箱 *</Label>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="create-holder-email">邮箱</Label>
               <Input
                 id="create-holder-email"
                 type="email"
                 value={formData.holder_email}
                 onChange={(e) => setFormData({...formData, holder_email: e.target.value})}
                 placeholder="email@example.com"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-country">国家</Label>
-              <Input
-                id="create-country"
-                value={formData.country}
-                onChange={(e) => setFormData({...formData, country: e.target.value})}
-                placeholder="IN"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-province">省/邦</Label>
-              <Input
-                id="create-province"
-                value={formData.province}
-                onChange={(e) => setFormData({...formData, province: e.target.value})}
-                placeholder="如: Maharashtra"
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="create-city">城市</Label>
-              <Input
-                id="create-city"
-                value={formData.city}
-                onChange={(e) => setFormData({...formData, city: e.target.value})}
-                placeholder="如: Mumbai"
               />
             </div>
             <div className="col-span-2 space-y-2">
@@ -696,25 +732,63 @@ export function CashierManagement() {
 
       {/* 编辑Cashier对话框 */}
       <Dialog open={showEditDialog} onOpenChange={setShowEditDialog}>
-        <DialogContent className="max-w-2xl">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>编辑Cashier</DialogTitle>
+            <DialogTitle>编辑Cashier账户</DialogTitle>
             <DialogDescription>
-              修改Cashier信息
+              修改Cashier账户信息
             </DialogDescription>
           </DialogHeader>
           <div className="grid grid-cols-2 gap-4 py-4">
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="edit-user-id">User ID</Label>
+              <Input
+                id="edit-user-id"
+                value={formData.user_id}
+                onChange={(e) => setFormData({...formData, user_id: e.target.value})}
+                placeholder="收银员用户ID"
+              />
+            </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-type">账户类型</Label>
-              <Select value={formData.type} onValueChange={(value) => setFormData({...formData, type: value})}>
-                <SelectTrigger id="edit-type">
+              <Label htmlFor="edit-app-type">APP类型</Label>
+              <Select value={formData.app_type} onValueChange={(value) => setFormData({...formData, app_type: value})}>
+                <SelectTrigger id="edit-app-type">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="private">私户</SelectItem>
-                  <SelectItem value="corporate">公户</SelectItem>
+                  <SelectItem value="freecharge">Freecharge</SelectItem>
+                  <SelectItem value="paytm">Paytm</SelectItem>
+                  <SelectItem value="phonepe">PhonePe</SelectItem>
+                  <SelectItem value="gpay">Google Pay</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-app-account">APP账号ID</Label>
+              <Input
+                id="edit-app-account"
+                value={formData.app_account}
+                onChange={(e) => setFormData({...formData, app_account: e.target.value})}
+                placeholder="绑定的APP账号ID"
+              />
+            </div>
+            <div className="col-span-2 space-y-2">
+              <Label htmlFor="edit-upi">UPI ID</Label>
+              <Input
+                id="edit-upi"
+                value={formData.upi}
+                onChange={(e) => setFormData({...formData, upi: e.target.value})}
+                placeholder="如: 9876543001@paytm"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="edit-provider">UPI提供商</Label>
+              <Input
+                id="edit-provider"
+                value={formData.provider}
+                onChange={(e) => setFormData({...formData, provider: e.target.value})}
+                placeholder="如: Paytm, PhonePe"
+              />
             </div>
             <div className="space-y-2">
               <Label htmlFor="edit-bank-code">银行代码</Label>
@@ -733,7 +807,7 @@ export function CashierManagement() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="edit-card-number">卡号/UPI</Label>
+              <Label htmlFor="edit-card-number">银行卡号</Label>
               <Input
                 id="edit-card-number"
                 value={formData.card_number}
@@ -756,37 +830,13 @@ export function CashierManagement() {
                 onChange={(e) => setFormData({...formData, holder_phone: e.target.value})}
               />
             </div>
-            <div className="space-y-2">
+            <div className="col-span-2 space-y-2">
               <Label htmlFor="edit-holder-email">邮箱</Label>
               <Input
                 id="edit-holder-email"
                 type="email"
                 value={formData.holder_email}
                 onChange={(e) => setFormData({...formData, holder_email: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-country">国家</Label>
-              <Input
-                id="edit-country"
-                value={formData.country}
-                onChange={(e) => setFormData({...formData, country: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-province">省/邦</Label>
-              <Input
-                id="edit-province"
-                value={formData.province}
-                onChange={(e) => setFormData({...formData, province: e.target.value})}
-              />
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="edit-city">城市</Label>
-              <Input
-                id="edit-city"
-                value={formData.city}
-                onChange={(e) => setFormData({...formData, city: e.target.value})}
               />
             </div>
             <div className="col-span-2 space-y-2">

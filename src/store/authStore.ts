@@ -9,7 +9,6 @@ export interface User {
   role: string;
   permissions: string[];
   avatar?: string;
-  cid?: string; // 车队ID
 }
 
 interface AuthState {
