@@ -19,6 +19,7 @@ export const STATUS = {
   SUCCESS: 'success',
   FAILED: 'failed',
   CANCELLED: 'cancelled',
+  CANCELED: 'canceled', // 已取消（美式拼写）
   EXPIRED: 'expired',
   COMPLETED: 'completed',
   
@@ -34,7 +35,16 @@ export const STATUS = {
   ONLINE: 'online',
   OFFLINE: 'offline',
   BUSY: 'busy',
-  LOCKED: 'locked'
+  LOCKED: 'locked',
+  FROZEN: 'frozen',
+  
+  // 验证状态
+  VERIFIED: 'verified',
+  UNVERIFIED: 'unverified',
+  
+  // 账户类型
+  PRIVATE: 'private',
+  CORPORATE: 'corporate'
 } as const;
 
 // 状态类型定义
@@ -56,6 +66,7 @@ export const STATUS_DISPLAY_NAMES: Record<StatusType, string> = {
   success: '成功',
   failed: '失败',
   cancelled: '已取消',
+  canceled: '已取消',
   expired: '已过期',
   completed: '已完成',
   approved: '已批准',
@@ -65,7 +76,12 @@ export const STATUS_DISPLAY_NAMES: Record<StatusType, string> = {
   online: '在线',
   offline: '离线',
   busy: '忙碌',
-  locked: '锁定'
+  locked: '锁定',
+  frozen: '冻结',
+  verified: '已验证',
+  unverified: '未验证',
+  private: '私户',
+  corporate: '公户'
 };
 
 // 状态颜色映射（用于Badge组件）
@@ -84,6 +100,7 @@ export const STATUS_COLORS: Record<StatusType, string> = {
   success: 'success',
   failed: 'error',
   cancelled: 'default',
+  canceled: 'default',
   expired: 'warning',
   completed: 'success',
   approved: 'success',
@@ -93,7 +110,12 @@ export const STATUS_COLORS: Record<StatusType, string> = {
   online: 'success',
   offline: 'default',
   busy: 'warning',
-  locked: 'error'
+  locked: 'error',
+  frozen: 'error',
+  verified: 'success',
+  unverified: 'warning',
+  private: 'default',
+  corporate: 'default'
 };
 
 // 获取状态显示名称
@@ -114,7 +136,7 @@ export const isSuccessStatus = (status: string): boolean => {
 
 // 检查状态是否为失败状态
 export const isFailureStatus = (status: string): boolean => {
-  const failureStatuses = [STATUS.FAILED, STATUS.REJECTED, STATUS.CANCELLED, STATUS.EXPIRED, STATUS.DELETED];
+  const failureStatuses = [STATUS.FAILED, STATUS.REJECTED, STATUS.CANCELLED, STATUS.CANCELED, STATUS.EXPIRED, STATUS.DELETED];
   return failureStatuses.includes(status as any);
 };
 
@@ -128,7 +150,7 @@ export const isProcessingStatus = (status: string): boolean => {
 export const TRANSACTION_STATUS_GROUPS = {
   PROCESSING: [STATUS.PENDING, STATUS.PROCESSING, STATUS.SUBMITTED, STATUS.CONFIRMING, STATUS.CREATED],
   SUCCESS: [STATUS.SUCCESS, STATUS.COMPLETED, STATUS.APPROVED],
-  FAILED: [STATUS.FAILED, STATUS.REJECTED, STATUS.CANCELLED, STATUS.EXPIRED],
+  FAILED: [STATUS.FAILED, STATUS.REJECTED, STATUS.CANCELLED, STATUS.CANCELED, STATUS.EXPIRED],
   INACTIVE: [STATUS.INACTIVE, STATUS.SUSPENDED, STATUS.DELETED, STATUS.DISABLED, STATUS.OFF]
 };
 
@@ -140,4 +162,29 @@ export const getStatusGroup = (status: string): keyof typeof TRANSACTION_STATUS_
     }
   }
   return 'UNKNOWN';
+};
+
+// 账户状态 Badge 配置
+export interface StatusBadgeConfig {
+  label: string;
+  variant: 'default' | 'secondary' | 'destructive' | 'outline';
+  className: string;
+}
+
+export const ACCOUNT_STATUS_BADGE_CONFIG: Record<string, StatusBadgeConfig> = {
+  'active': { label: '正常', variant: 'default', className: 'bg-green-500' },
+  'inactive': { label: '停用', variant: 'secondary', className: 'bg-gray-500' },
+  'frozen': { label: '冻结', variant: 'destructive', className: '' },
+  'suspended': { label: '暂停', variant: 'destructive', className: 'bg-yellow-500' },
+  'locked': { label: '锁定', variant: 'destructive', className: '' },
+  'deleted': { label: '已删除', variant: 'secondary', className: 'bg-gray-400' }
+};
+
+// 获取账户状态 Badge 配置
+export const getAccountStatusBadgeConfig = (status: string): StatusBadgeConfig => {
+  return ACCOUNT_STATUS_BADGE_CONFIG[status] || { 
+    label: '未知', 
+    variant: 'outline' as const, 
+    className: '' 
+  };
 };
