@@ -12,9 +12,8 @@ env:
   API_HOST: 43.204.234.146  # 替换为生产环境IP
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment: PROD
     permissions:
       contents: read
       packages: write
@@ -69,6 +68,12 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
 
+  deploy:
+    runs-on: ubuntu-latest
+    environment: PROD
+    needs: build
+    
+    steps:
     - name: Deploy to AWS Server
       uses: appleboy/ssh-action@v1.0.0
       with:

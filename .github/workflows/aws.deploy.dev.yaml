@@ -11,9 +11,8 @@ env:
   AWS_HOST: 43.204.234.146
 
 jobs:
-  build-and-deploy:
+  build:
     runs-on: ubuntu-latest
-    environment: DEV
     permissions:
       contents: read
       packages: write
@@ -68,6 +67,12 @@ jobs:
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
 
+  deploy:
+    runs-on: ubuntu-latest
+    environment: DEV
+    needs: build
+    
+    steps:
     - name: Deploy to AWS Server
       uses: appleboy/ssh-action@v1.0.0
       with:
